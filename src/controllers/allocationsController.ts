@@ -6,7 +6,7 @@ export async function listAllocations(request: FastifyRequest, reply: FastifyRep
     const { start_date, end_date } = request.query as { start_date?: string; end_date?: string };
 
     let query = supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('allocations')
         .select(`
             *,
@@ -61,7 +61,7 @@ export async function createAllocation(request: FastifyRequest, reply: FastifyRe
             if (!isAvailable) {
                 // Fetch asset name for error message
                 const { data: asset } = await supabase
-                    .schema('zresource')
+                    .schema('zmanage')
                     .from('assets')
                     .select('name')
                     .eq('id', assetId)
@@ -89,7 +89,7 @@ export async function createAllocation(request: FastifyRequest, reply: FastifyRe
 
             if (!isAvailable) {
                 const { data: worker } = await supabase
-                    .schema('zresource')
+                    .schema('zmanage')
                     .from('workers')
                     .select('name')
                     .eq('id', member.worker_id)
@@ -104,7 +104,7 @@ export async function createAllocation(request: FastifyRequest, reply: FastifyRe
 
     // 3. Create Allocation Record
     const { data: allocation, error: allocError } = await supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('allocations')
         .insert({
             client_id: clientId,
@@ -134,7 +134,7 @@ export async function createAllocation(request: FastifyRequest, reply: FastifyRe
             lock_end: end_time,
             status: 'locked'
         }));
-        await supabase.schema('zresource').from('asset_locks').insert(assetLocks);
+        await supabase.schema('zmanage').from('asset_locks').insert(assetLocks);
     }
 
     // 5. Dispatch Shifts & Stage Worker Payouts
@@ -145,7 +145,7 @@ export async function createAllocation(request: FastifyRequest, reply: FastifyRe
             const pay = member.agreed_pay || 0;
 
             const { data: shift } = await supabase
-                .schema('zresource')
+                .schema('zmanage')
                 .from('worker_shifts')
                 .insert({
                     client_id: clientId,
@@ -164,7 +164,7 @@ export async function createAllocation(request: FastifyRequest, reply: FastifyRe
             // Auto-stage pending worker payout in financial ledger
             if (shift && pay > 0) {
                 await supabase
-                    .schema('zresource')
+                    .schema('zmanage')
                     .from('worker_payouts')
                     .insert({
                         client_id: clientId,
@@ -193,7 +193,7 @@ export async function deleteAllocation(request: FastifyRequest, reply: FastifyRe
 
     // Soft delete allocation
     const { error } = await supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('allocations')
         .update({ status: 'cancelled', deleted_flag: true, updated_at: new Date().toISOString() })
         .eq('id', id)
@@ -203,7 +203,7 @@ export async function deleteAllocation(request: FastifyRequest, reply: FastifyRe
 
     // Release asset locks
     await supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('asset_locks')
         .update({ status: 'released', deleted_flag: true })
         .eq('allocation_id', id);

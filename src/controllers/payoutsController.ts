@@ -6,7 +6,7 @@ export async function listPayouts(request: FastifyRequest, reply: FastifyReply) 
     const { status, worker_id } = request.query as { status?: string; worker_id?: string };
 
     let query = supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('worker_payouts')
         .select(`
             *,
@@ -36,7 +36,7 @@ export async function settlePayout(request: FastifyRequest, reply: FastifyReply)
     };
 
     const { data, error } = await supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('worker_payouts')
         .update({
             payout_status: 'paid',
@@ -59,7 +59,7 @@ export async function getPayoutsSummary(request: FastifyRequest, reply: FastifyR
     const { projectId } = request.tenantContext!;
 
     const { data, error } = await supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('worker_payouts')
         .select('total_amount, payout_status')
         .eq('project_id', projectId)

@@ -22,7 +22,7 @@ const _env = envSchema.safeParse(process.env);
 
 if (!_env.success) {
     // eslint-disable-next-line no-console
-    console.error('❌ Invalid environment variables for ZResource-APIs:');
+    console.error('❌ Invalid environment variables for ZManage-APIs:');
     // eslint-disable-next-line no-console
     console.error(JSON.stringify(_env.error.format(), null, 2));
     process.exit(1);

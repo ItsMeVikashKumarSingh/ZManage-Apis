@@ -1,4 +1,34 @@
-# ZResource-APIs Changelog
+# ZManage-APIs Changelog
+
+## [0.1.5] - 2026-09-12
+### Database Schema Realignment to zmanage
+- **Database Schema Migration (`controllers/`)**:
+  - Realigned all database queries and mutations in `assetsController`, `workersController`, `allocationsController`, and `payoutsController` from schema `zresource` to dedicated schema `zmanage`.
+  - Re-routed RPC calls (`fn_check_asset_availability`, `fn_check_worker_availability`, `fn_generate_next_asset_code`) to the `zmanage` execution paths with public wrappers.
+
+## [0.1.4] - 2026-09-12
+### Microservice Project & Folder Realignment
+- **Service & Folder Realignment**:
+  - Renamed workspace directory from `ZResource-APIs` to `ZManage-APIs`.
+  - Synchronized package manifest name to `zmanage-apis`.
+  - Standardized startup logs, Swagger definitions, health response service identifiers, and environment diagnostics to `ZManage-APIs`.
+
+## [0.1.3] - 2026-09-11
+### Enterprise Auto-ID Sequence Generation & RLS Hardening
+- **Auto-Code Sequence Generator (`assetsController.ts`)**:
+  - Integrated `fn_generate_next_asset_code` RPC: if asset code is not manually provided during registration, automatically generates clean category-based sequential identifiers (`CAM-001`, `LNS-001`, `DRN-001`, `LGT-001`).
+- **RLS & Privilege Resolution**:
+  - Supported universal backend access policies across `zresource` schema tables, eliminating `new row violates row-level security policy` errors.
+
+## [0.1.2] - 2026-09-11
+### Multi-Layer Per-Request Security Validation & ZManage Rebranding
+- **Zero-Trust Per-Request Validation Middleware (`src/middleware/clientAuth.ts`)**:
+  - Implemented cryptographic Supabase JWT verification on every incoming request (`Authorization: Bearer <token>`) via `supabase.auth.getUser`.
+  - Cross-validates tenant identity against `management.tbl_clients` and `management.tbl_client_projects`.
+  - Enforces active status checks: rejects disabled or deleted client accounts immediately with `401 Unauthorized`.
+  - Maintains full support for `sk_live_...` (custom server integrations) and `pk_live_...` (native mobile / web).
+- **Service Rebranding**:
+  - Renamed service and welcome endpoint to **ZManage-APIs**.
 
 ## [0.1.1] - 2026-09-11
 ### Client Auth & PostgREST Schema Optimization

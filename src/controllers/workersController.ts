@@ -6,7 +6,7 @@ export async function listWorkers(request: FastifyRequest, reply: FastifyReply) 
     const { role, worker_type, search } = request.query as { role?: string; worker_type?: string; search?: string };
 
     let query = supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('workers')
         .select('*')
         .eq('project_id', projectId)
@@ -28,7 +28,7 @@ export async function createWorker(request: FastifyRequest, reply: FastifyReply)
     const body = request.body as any;
 
     const { data, error } = await supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('workers')
         .insert({
             client_id: clientId,
@@ -60,7 +60,7 @@ export async function updateWorker(request: FastifyRequest, reply: FastifyReply)
     const body = request.body as any;
 
     const { data, error } = await supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('workers')
         .update({
             ...body,
@@ -117,7 +117,7 @@ export async function getImportCandidates(request: FastifyRequest, reply: Fastif
             .eq('tcu_client_id', clientId);
 
         const { data: existingWorkers } = await supabase
-            .schema('zresource')
+            .schema('zmanage')
             .from('workers')
             .select('user_id, phone, email')
             .eq('project_id', projectId)
@@ -141,9 +141,9 @@ export async function getImportCandidates(request: FastifyRequest, reply: Fastif
         });
     }
 
-    // 2. Fetch existing workers in zresource to mark already-onboarded staff
+    // 2. Fetch existing workers in zmanage to mark already-onboarded staff
     const { data: existingWorkers } = await supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('workers')
         .select('user_id, phone, email')
         .eq('project_id', projectId)
@@ -209,7 +209,7 @@ export async function batchImportWorkers(request: FastifyRequest, reply: Fastify
     }));
 
     const { data, error } = await supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('workers')
         .insert(payload)
         .select();

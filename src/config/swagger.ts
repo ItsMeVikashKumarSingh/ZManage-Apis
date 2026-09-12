@@ -4,9 +4,9 @@ import { FastifySwaggerUiOptions } from '@fastify/swagger-ui';
 export const swaggerOptions: SwaggerOptions = {
     openapi: {
         info: {
-            title: 'Zorvik ZResource-APIs',
-            description: 'Multi-Tenant Internal Resource, Asset Inventory, Team Scheduling & Worker Payouts API',
-            version: '0.1.0'
+            title: 'Zorvik ZManage-APIs',
+            description: 'Multi-Tenant Internal Resource, Asset Inventory, Team Scheduling & Worker Payouts API (ZManage)',
+            version: '0.1.4'
         },
         servers: [
             {

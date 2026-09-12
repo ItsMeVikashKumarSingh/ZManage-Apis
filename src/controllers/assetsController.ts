@@ -6,7 +6,7 @@ export async function listAssets(request: FastifyRequest, reply: FastifyReply) {
     const { category, status, search } = request.query as { category?: string; status?: string; search?: string };
 
     let query = supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('assets')
         .select('*')
         .eq('project_id', projectId)
@@ -27,16 +27,26 @@ export async function createAsset(request: FastifyRequest, reply: FastifyReply) 
     const { clientId, projectId } = request.tenantContext!;
     const body = request.body as any;
 
+    // Auto-generate human-readable asset code (e.g. CAM-001, LNS-002) if not manually supplied
+    let assetCode = (body.code || '').trim();
+    if (!assetCode && body.category) {
+        const { data: generatedCode } = await supabase.rpc('fn_generate_next_asset_code', {
+            p_project_id: projectId,
+            p_category: body.category
+        });
+        assetCode = generatedCode || `${body.category.substring(0, 3).toUpperCase()}-001`;
+    }
+
     const { data, error } = await supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('assets')
         .insert({
             client_id: clientId,
             project_id: projectId,
             name: body.name,
-            code: body.code,
+            code: assetCode,
             category: body.category,
-            serial_number: body.serial_number,
+            serial_number: body.serial_number || 'N/A',
             condition: body.condition || 'excellent',
             status: body.status || 'available',
             purchase_date: body.purchase_date,
@@ -59,7 +69,7 @@ export async function updateAsset(request: FastifyRequest, reply: FastifyReply) 
     const body = request.body as any;
 
     const { data, error } = await supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('assets')
         .update({
             ...body,
@@ -101,7 +111,7 @@ export async function checkoutAsset(request: FastifyRequest, reply: FastifyReply
     const { allocation_id } = request.body as { allocation_id: string };
 
     const { data, error } = await supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('assets')
         .update({ status: 'on_shoot', updated_at: new Date().toISOString() })
         .eq('id', id)
@@ -113,7 +123,7 @@ export async function checkoutAsset(request: FastifyRequest, reply: FastifyReply
 
     // Update lock status
     await supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('asset_locks')
         .update({
             status: 'checked_out',
@@ -132,7 +142,7 @@ export async function checkinAsset(request: FastifyRequest, reply: FastifyReply)
     const { condition, return_notes } = request.body as { condition?: string; return_notes?: string };
 
     const { data, error } = await supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('assets')
         .update({
             status: 'available',
@@ -148,7 +158,7 @@ export async function checkinAsset(request: FastifyRequest, reply: FastifyReply)
     if (error) return reply.code(400).send({ error: error.message });
 
     await supabase
-        .schema('zresource')
+        .schema('zmanage')
         .from('asset_locks')
         .update({
             status: 'returned',

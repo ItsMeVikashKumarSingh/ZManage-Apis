@@ -40,7 +40,7 @@ export async function buildApp() {
     // Root Welcome
     app.get('/', async () => {
         return {
-            service: 'Zorvik ZResource-APIs',
+            service: 'Zorvik ZManage-APIs',
             version: '0.1.0',
             status: 'online',
             documentation: '/documentation',
@@ -66,11 +66,11 @@ if (process.env.NODE_ENV !== 'test') {
             app.listen({ port: env.PORT, host: '0.0.0.0' }, (err, address) => {
                 if (err) {
                     // eslint-disable-next-line no-console
-                    console.error('Failed to start ZResource-APIs:', err);
+                    console.error('Failed to start ZManage-APIs:', err);
                     process.exit(1);
                 }
                 // eslint-disable-next-line no-console
-                console.log(`🚀 ZResource-APIs running at ${address}`);
+                console.log(`🚀 ZManage-APIs running at ${address}`);
                 // eslint-disable-next-line no-console
                 console.log(`📖 Documentation available at ${address}/documentation`);
             });

@@ -1,6 +1,6 @@
-# ZResource-APIs
+# ZManage-APIs
 
-Multi-Tenant Internal Resource, Asset Inventory, Team Scheduling & Worker Payouts Microservice for Zorvik Tech.
+Multi-Tenant Internal Resource, Asset Inventory, Team Scheduling & Worker Payouts Microservice (ZManage) for Zorvik Tech.
 
 ## Core Features
 - **Hardware & Gear Inventory**:
