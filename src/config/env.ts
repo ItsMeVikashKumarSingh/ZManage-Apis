@@ -16,6 +16,9 @@ const envSchema = z.object({
     // Supabase
     SUPABASE_URL: z.string().default(process.env.NODE_ENV === 'test' ? 'https://mock.supabase.co' : ''),
     SUPABASE_SERVICE_ROLE_KEY: z.string().default(process.env.NODE_ENV === 'test' ? 'mock_service_key' : ''),
+
+    // Zorvik AI Microservice
+    ZORVIK_AI_URL: z.string().default('https://ai.zorviktech.com/api/v1'),
 });
 
 const _env = envSchema.safeParse(process.env);

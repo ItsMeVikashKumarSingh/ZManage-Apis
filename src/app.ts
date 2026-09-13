@@ -14,18 +14,35 @@ import assetRoutes from './routes/assets';
 import workerRoutes from './routes/workers';
 import allocationRoutes from './routes/allocations';
 import payoutRoutes from './routes/payouts';
+import analyticsRoutes from './routes/analytics';
+import { auditLogsRoutes } from './routes/auditLogs';
+import vaultRoutes from './routes/vaults';
+import consumableRoutes from './routes/consumables';
+import kitRoutes from './routes/kits';
+import aiRoutes from './routes/ai';
 
 export async function buildApp() {
     const app = fastify({
         logger: false,
-        trustProxy: true
+        trustProxy: true,
+        bodyLimit: 15 * 1024 * 1024 // 15MB for PDF and multimodal document uploads
     });
 
     // Core Security Plugins
     await app.register(helmet, { contentSecurityPolicy: false });
     await app.register(cors, {
         origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN.split(','),
-        credentials: true
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: [
+            'Content-Type',
+            'Authorization',
+            'X-Tenant-ID',
+            'X-Publishable-Key',
+            'x-tenant-id',
+            'x-publishable-key',
+            'Accept'
+        ]
     });
 
     // Swagger Documentation
@@ -55,6 +72,12 @@ export async function buildApp() {
     await app.register(workerRoutes, { prefix: '/api/v1/workers' });
     await app.register(allocationRoutes, { prefix: '/api/v1/allocations' });
     await app.register(payoutRoutes, { prefix: '/api/v1/payouts' });
+    await app.register(analyticsRoutes, { prefix: '/api/v1/analytics' });
+    await app.register(auditLogsRoutes, { prefix: '/api/v1/audit-logs' });
+    await app.register(vaultRoutes, { prefix: '/api/v1/vaults' });
+    await app.register(consumableRoutes, { prefix: '/api/v1/consumables' });
+    await app.register(kitRoutes, { prefix: '/api/v1/kits' });
+    await app.register(aiRoutes, { prefix: '/api/v1/ai' });
 
     return app;
 }

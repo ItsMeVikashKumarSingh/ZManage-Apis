@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { supabase } from '../config/supabase';
+import { logAuditEvent } from '../utils/auditLogger';
 
 export async function listWorkers(request: FastifyRequest, reply: FastifyReply) {
     const { projectId } = request.tenantContext!;
@@ -51,6 +52,15 @@ export async function createWorker(request: FastifyRequest, reply: FastifyReply)
         .single();
 
     if (error) return reply.code(400).send({ error: error.message });
+
+    logAuditEvent(request, 'WORKER_ONBOARDED', 'WORKER', {
+        worker_id: data.id,
+        name: data.name,
+        primary_role: data.primary_role,
+        worker_type: data.worker_type,
+        day_rate: data.day_rate
+    });
+
     return reply.code(201).send({ success: true, worker: data });
 }
 
@@ -72,6 +82,14 @@ export async function updateWorker(request: FastifyRequest, reply: FastifyReply)
         .single();
 
     if (error) return reply.code(400).send({ error: error.message });
+
+    logAuditEvent(request, 'WORKER_UPDATED', 'WORKER', {
+        worker_id: id,
+        name: data.name,
+        primary_role: data.primary_role,
+        updated_fields: Object.keys(body)
+    });
+
     return reply.send({ success: true, worker: data });
 }
 
@@ -221,4 +239,32 @@ export async function batchImportWorkers(request: FastifyRequest, reply: Fastify
         imported_count: data?.length || 0,
         workers: data
     });
+}
+
+export async function deleteWorker(request: FastifyRequest, reply: FastifyReply) {
+    const { projectId } = request.tenantContext!;
+    const { id } = request.params as { id: string };
+
+    const { data, error } = await supabase
+        .schema('zmanage')
+        .from('workers')
+        .update({
+            deleted_flag: true,
+            is_active: false,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('project_id', projectId)
+        .select()
+        .single();
+
+    if (error) return reply.code(400).send({ error: error.message });
+
+    logAuditEvent(request, 'WORKER_REMOVED', 'WORKER', {
+        worker_id: id,
+        name: data.name,
+        primary_role: data.primary_role
+    });
+
+    return reply.send({ success: true, message: 'Worker deleted successfully', worker: data });
 }

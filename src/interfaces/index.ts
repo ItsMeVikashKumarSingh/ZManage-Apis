@@ -126,4 +126,5 @@ export interface TenantContext {
     clientId: string;
     projectId: string;
     channel: 'MANAGED' | 'CUSTOM_API' | 'CUSTOM_MOBILE';
+    userId?: string;
 }

@@ -33,13 +33,20 @@ export async function clientAuthMiddleware(request: FastifyRequest, reply: Fasti
             const { data: project, error } = await supabase
                 .schema('management')
                 .from('tbl_client_projects')
-                .select('tcp_id, tcp_client_id, tcp_is_active, tcp_deleted_flag')
+                .select('tcp_id, tcp_client_id, tcp_is_active, tcp_rms_enabled, tcp_deleted_flag')
                 .eq('tcp_secret_key', token)
                 .eq('tcp_deleted_flag', false)
                 .single();
 
             if (error || !project || project.tcp_is_active === false) {
                 return reply.code(401).send({ error: 'Invalid, inactive, or revoked Secret Key' });
+            }
+
+            if (project.tcp_rms_enabled === false) {
+                return reply.code(403).send({
+                    error: 'RMS_DISABLED',
+                    message: 'Resource Management System is not enabled for this project.'
+                });
             }
 
             request.tenantContext = {
@@ -67,13 +74,19 @@ export async function clientAuthMiddleware(request: FastifyRequest, reply: Fasti
                     const { data: targetProject } = await supabase
                         .schema('management')
                         .from('tbl_client_projects')
-                        .select('tcp_id, tcp_client_id, tcp_is_active, tcp_deleted_flag')
+                        .select('tcp_id, tcp_client_id, tcp_is_active, tcp_rms_enabled, tcp_deleted_flag')
                         .or(`tcp_id.eq.${tenantIdHeader},tcp_client_id.eq.${tenantIdHeader}`)
                         .eq('tcp_deleted_flag', false)
                         .limit(1)
                         .maybeSingle();
 
                     if (targetProject && targetProject.tcp_is_active !== false) {
+                        if (targetProject.tcp_rms_enabled === false) {
+                            return reply.code(403).send({
+                                error: 'RMS_DISABLED',
+                                message: 'Resource Management System is not enabled for this project.'
+                            });
+                        }
                         targetClientId = targetProject.tcp_client_id;
                         targetProjectId = targetProject.tcp_id;
                     }
@@ -95,9 +108,10 @@ export async function clientAuthMiddleware(request: FastifyRequest, reply: Fasti
                         const { data: proj } = await supabase
                             .schema('management')
                             .from('tbl_client_projects')
-                            .select('tcp_id')
+                            .select('tcp_id, tcp_rms_enabled')
                             .eq('tcp_client_id', targetClientId)
                             .eq('tcp_deleted_flag', false)
+                            .filter('tcp_rms_enabled', 'neq', false)
                             .order('tcp_is_primary', { ascending: false })
                             .limit(1)
                             .maybeSingle();
@@ -113,7 +127,8 @@ export async function clientAuthMiddleware(request: FastifyRequest, reply: Fasti
                     request.tenantContext = {
                         clientId: targetClientId,
                         projectId: targetProjectId,
-                        channel: 'MANAGED'
+                        channel: 'MANAGED',
+                        userId
                     };
                     return;
                 }
@@ -128,13 +143,20 @@ export async function clientAuthMiddleware(request: FastifyRequest, reply: Fasti
         const { data: project, error } = await supabase
             .schema('management')
             .from('tbl_client_projects')
-            .select('tcp_id, tcp_client_id, tcp_is_active, tcp_deleted_flag')
+            .select('tcp_id, tcp_client_id, tcp_is_active, tcp_rms_enabled, tcp_deleted_flag')
             .eq('tcp_publishable_key', pubKeyHeader)
             .eq('tcp_deleted_flag', false)
             .single();
 
         if (error || !project || project.tcp_is_active === false) {
             return reply.code(401).send({ error: 'Invalid or revoked Publishable Key' });
+        }
+
+        if (project.tcp_rms_enabled === false) {
+            return reply.code(403).send({
+                error: 'RMS_DISABLED',
+                message: 'Resource Management System is not enabled for this project.'
+            });
         }
 
         request.tenantContext = {
@@ -150,7 +172,7 @@ export async function clientAuthMiddleware(request: FastifyRequest, reply: Fasti
         const { data: project, error } = await supabase
             .schema('management')
             .from('tbl_client_projects')
-            .select('tcp_id, tcp_client_id, tcp_is_active, tcp_deleted_flag')
+            .select('tcp_id, tcp_client_id, tcp_is_active, tcp_rms_enabled, tcp_deleted_flag')
             .or(`tcp_id.eq.${tenantIdHeader},tcp_client_id.eq.${tenantIdHeader}`)
             .eq('tcp_deleted_flag', false)
             .limit(1)
@@ -158,6 +180,13 @@ export async function clientAuthMiddleware(request: FastifyRequest, reply: Fasti
 
         if (error || !project || project.tcp_is_active === false) {
             return reply.code(401).send({ error: 'Tenant project could not be resolved or is inactive' });
+        }
+
+        if (project.tcp_rms_enabled === false) {
+            return reply.code(403).send({
+                error: 'RMS_DISABLED',
+                message: 'Resource Management System is not enabled for this project.'
+            });
         }
 
         request.tenantContext = {

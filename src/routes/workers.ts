@@ -5,13 +5,15 @@ import {
     updateWorker,
     checkWorkerAvailability,
     getImportCandidates,
-    batchImportWorkers
+    batchImportWorkers,
+    deleteWorker
 } from '../controllers/workersController';
 
 export default async function workerRoutes(app: FastifyInstance) {
     app.get('/', listWorkers);
     app.post('/', createWorker);
     app.patch('/:id', updateWorker);
+    app.delete('/:id', deleteWorker);
     app.post('/check-availability', checkWorkerAvailability);
 
     // 1-Tap Team Onboarding Routes

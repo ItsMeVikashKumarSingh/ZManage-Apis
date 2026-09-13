@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { supabase } from '../config/supabase';
+import { logAuditEvent } from '../utils/auditLogger';
 
 export async function listPayouts(request: FastifyRequest, reply: FastifyReply) {
     const { projectId } = request.tenantContext!;
@@ -52,6 +53,15 @@ export async function settlePayout(request: FastifyRequest, reply: FastifyReply)
         .single();
 
     if (error) return reply.code(400).send({ error: error.message });
+
+    logAuditEvent(request, 'PAYOUT_SETTLED', 'PAYOUT', {
+        payout_id: id,
+        total_amount: data.total_amount,
+        payment_mode,
+        reference_number,
+        paid_at: data.paid_at
+    });
+
     return reply.send({ success: true, message: 'Payout settled successfully', payout: data });
 }
 
@@ -69,13 +79,17 @@ export async function getPayoutsSummary(request: FastifyRequest, reply: FastifyR
 
     let pendingTotal = 0;
     let paidTotal = 0;
+    let pendingCount = 0;
+    let settledCount = 0;
 
     (data || []).forEach(p => {
         const amount = Number(p.total_amount) || 0;
         if (p.payout_status === 'pending' || p.payout_status === 'approved') {
             pendingTotal += amount;
-        } else if (p.payout_status === 'paid') {
+            pendingCount++;
+        } else if (p.payout_status === 'paid' || p.payout_status === 'settled') {
             paidTotal += amount;
+            settledCount++;
         }
     });
 
@@ -83,8 +97,65 @@ export async function getPayoutsSummary(request: FastifyRequest, reply: FastifyR
         success: true,
         summary: {
             pending_total: pendingTotal,
+            settled_total: paidTotal,
             paid_total: paidTotal,
+            pending_count: pendingCount,
+            settled_count: settledCount,
             currency: 'INR'
         }
     });
+}
+
+export async function createPayout(request: FastifyRequest, reply: FastifyReply) {
+    const { clientId, projectId } = request.tenantContext!;
+    const body = request.body as {
+        worker_id: string;
+        allocation_id?: string;
+        base_amount?: number;
+        overtime_amount?: number;
+        bonus_or_deduction?: number;
+        total_amount: number;
+        currency?: string;
+        payout_status?: 'pending' | 'approved' | 'paid';
+        payment_mode?: 'upi' | 'bank_transfer' | 'cash' | 'gateway';
+        reference_number?: string;
+        notes?: string;
+    };
+
+    const { data, error } = await supabase
+        .schema('zmanage')
+        .from('worker_payouts')
+        .insert({
+            client_id: clientId,
+            project_id: projectId,
+            worker_id: body.worker_id,
+            allocation_id: body.allocation_id || null,
+            base_amount: body.base_amount || body.total_amount,
+            overtime_amount: body.overtime_amount || 0,
+            bonus_or_deduction: body.bonus_or_deduction || 0,
+            total_amount: body.total_amount,
+            currency: body.currency || 'INR',
+            payout_status: body.payout_status || 'pending',
+            payment_mode: body.payment_mode || null,
+            reference_number: body.reference_number || null,
+            notes: body.notes || null,
+            paid_at: body.payout_status === 'paid' ? new Date().toISOString() : null
+        })
+        .select(`
+            *,
+            workers (name, phone, primary_role, payment_details)
+        `)
+        .single();
+
+    if (error) return reply.code(400).send({ error: error.message });
+
+    logAuditEvent(request, 'PAYOUT_LOGGED', 'PAYOUT', {
+        payout_id: data.id,
+        worker_id: data.worker_id,
+        total_amount: data.total_amount,
+        payout_status: data.payout_status,
+        currency: data.currency
+    });
+
+    return reply.code(201).send({ success: true, payout: data });
 }
