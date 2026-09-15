@@ -350,7 +350,7 @@ export async function askStudioAssistant(request: FastifyRequest, reply: Fastify
 
         // Parse bookings identically to allocationsController
         const bookings = rawBookings
-            .filter(b => !clientId || b.client_id === clientId || b.client_id === '4fe1d2ee-1683-4c94-b334-4b18b6a18f94')
+            .filter(b => !clientId || b.client_id === clientId)
             .map(b => {
                 const pd = b.tb_payment_details || {};
                 const cj = b.tb_customer_json || {};
@@ -505,7 +505,7 @@ ${fileDirectives}
         if (!replyText) {
             if (hasFiles) {
                 const fileNames = attachedFiles.map(f => `**"${f.name}"** (${f.mimeType})`).join(', ');
-                replyText = `📄 **Document Received: ${fileNames}**\n\nThe attached file was successfully received by Zorvik AI Studio Ultra. However, real-time AI neural document parsing is momentarily busy. Please ask a specific question about this document or retry in a few moments.`;
+                replyText = `**Document Received:** ${fileNames}\n\nThe attached file was successfully received by Zorvik AI Studio Ultra. However, real-time AI neural document parsing is momentarily busy. Please ask a specific question about this document or retry in a few moments.`;
             } else {
                 const q = query.toLowerCase();
                 if (q.includes('shoot') || q.includes('booking') || q.includes('schedule') || q.includes('next')) {
@@ -514,19 +514,19 @@ ${fileDirectives}
                         const title = (nextShoot as any).shoot_title || (nextShoot as any).title || (nextShoot as any).package_name;
                         const date = (nextShoot as any).start_time || (nextShoot as any).event_date;
                         const venue = (nextShoot as any).shoot_venue || (nextShoot as any).venue || 'Studio Floor';
-                        replyText = `📅 **Next Scheduled Shoot:** **"${title}"**\n• **Date/Time:** ${date}\n• **Venue:** ${venue}\n• **Client:** ${(nextShoot as any).client_name || 'Direct Client'}\n• **Status:** ${(nextShoot as any).status || 'Confirmed'}`;
+                        replyText = `**Next Scheduled Shoot:** **"${title}"**\n• **Date/Time:** ${date}\n• **Venue:** ${venue}\n• **Client:** ${(nextShoot as any).client_name || 'Direct Client'}\n• **Status:** ${(nextShoot as any).status || 'Confirmed'}`;
                     } else {
-                        replyText = '📅 There are currently no upcoming shoots scheduled in the operations timeline.';
+                        replyText = 'There are currently no upcoming shoots scheduled in the operations timeline.';
                     }
                 } else if (q.includes('team') || q.includes('crew') || q.includes('member') || q.includes('worker') || q.includes('rate')) {
-                    replyText = `👥 **Studio Crew Roster (${workers.length} active members):**\n` + 
+                    replyText = `**Studio Crew Roster (${workers.length} active members):**\n` + 
                         workers.slice(0, 5).map(w => `• **${w.name}** — ${w.primary_role} (₹${w.day_rate}/day)`).join('\n');
                 } else if (q.includes('money') || q.includes('payout') || q.includes('pending') || q.includes('pay') || q.includes('cost')) {
-                    replyText = `💰 **Studio Financial Summary:**\n• **Pending Payouts:** ₹${pendingPayoutsTotal.toLocaleString()} (${payouts.filter(isPending).length} pending settlements)\n• **Settled Disbursals:** ₹${settledPayoutsTotal.toLocaleString()} (${payouts.filter(isSettled).length} transactions paid)`;
+                    replyText = `**Studio Financial Summary:**\n• **Pending Payouts:** ₹${pendingPayoutsTotal.toLocaleString()} (${payouts.filter(isPending).length} pending settlements)\n• **Settled Disbursals:** ₹${settledPayoutsTotal.toLocaleString()} (${payouts.filter(isSettled).length} transactions paid)`;
                 } else if (q.includes('gear') || q.includes('camera') || q.includes('device') || q.includes('item') || q.includes('inventory')) {
-                    replyText = `📦 **Equipment Inventory:**\n• **Total Gear:** ${totalItems} items\n• **Available Now:** ${availableItems} items\n• **On Shoot:** ${onShootItems} items\n• **In Maintenance:** ${maintenanceItems} items`;
+                    replyText = `**Equipment Inventory:**\n• **Total Gear:** ${totalItems} items\n• **Available Now:** ${availableItems} items\n• **On Shoot:** ${onShootItems} items\n• **In Maintenance:** ${maintenanceItems} items`;
                 } else {
-                    replyText = `👋 I am **Zorvik-AI Studio Copilot**. You can ask me anything about:\n• **Shoots & Schedule:** *"When is my next shoot?"* or *"Who is booked this weekend?"*\n• **Team & Crew:** *"What is the day rate for our lead cinematographer?"*\n• **Inventory & Gear:** *"How many cameras are available right now?"*\n• **Money & Payouts:** *"How much payout is pending for contractors?"*`;
+                    replyText = `I am **Zorvik-AI Studio Copilot**. You can ask me anything about:\n• **Shoots & Schedule:** *"When is my next shoot?"* or *"Who is booked this weekend?"*\n• **Team & Crew:** *"What is the day rate for our lead cinematographer?"*\n• **Inventory & Gear:** *"How many cameras are available right now?"*\n• **Money & Payouts:** *"How much payout is pending for contractors?"*`;
                 }
             }
         }

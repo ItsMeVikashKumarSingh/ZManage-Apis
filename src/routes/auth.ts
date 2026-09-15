@@ -6,7 +6,17 @@ export default async function authRoutes(app: FastifyInstance) {
      * @route POST /api/v1/auth/login
      * @desc Client login with plain email and password (identical to Zorvik Tech client login)
      */
-    app.post('/login', async (request: FastifyRequest, reply: FastifyReply) => {
+    app.post(
+        '/login',
+        {
+            config: {
+                rateLimit: {
+                    max: 10,
+                    timeWindow: '1 minute'
+                }
+            }
+        },
+        async (request: FastifyRequest, reply: FastifyReply) => {
         const { email, password } = request.body as { email?: string; password?: string };
 
         if (!email || !password) {
@@ -118,8 +128,8 @@ export default async function authRoutes(app: FastifyInstance) {
         // If client/project exists, return enriched session
         return reply.send({
             success: true,
-            token: authData.session?.access_token || `zres_auth_${userId}`,
-            tenantId: projectId || clientId || '4321ffd8-648e-40e5-b1f0-d64956dfb62c',
+            token: authData.session?.access_token || `zm_auth_${userId}`,
+            tenantId: projectId || clientId || '',
             clientName,
             rmsEnabled: clientProjects.length > 0,
             projects: clientProjects,

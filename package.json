@@ -1,6 +1,6 @@
 {
   "name": "zmanage-apis",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "description": "Multi-Tenant Internal Resource, Asset Inventory, Team Scheduling & Worker Payouts Microservice (ZManage) for Zorvik Tech",
   "main": "dist/app.js",
   "engines": {

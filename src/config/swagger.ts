@@ -6,7 +6,7 @@ export const swaggerOptions: SwaggerOptions = {
         info: {
             title: 'Zorvik ZManage-APIs',
             description: 'Multi-Tenant Internal Resource, Asset Inventory, Team Scheduling & Worker Payouts API (ZManage)',
-            version: '0.1.4'
+            version: '0.3.2'
         },
         servers: [
             {

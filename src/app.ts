@@ -1,6 +1,7 @@
 import fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { env } from './config/env';
@@ -30,6 +31,15 @@ export async function buildApp() {
 
     // Core Security Plugins
     await app.register(helmet, { contentSecurityPolicy: false });
+    await app.register(rateLimit, {
+        max: 120,
+        timeWindow: '1 minute',
+        errorResponseBuilder: (_request, context) => ({
+            statusCode: 429,
+            error: 'Too Many Requests',
+            message: `Rate limit exceeded. Try again in ${Math.ceil(context.ttl / 1000)} seconds.`
+        })
+    });
     await app.register(cors, {
         origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN.split(','),
         credentials: true,
@@ -58,7 +68,7 @@ export async function buildApp() {
     app.get('/', async () => {
         return {
             service: 'Zorvik ZManage-APIs',
-            version: '0.1.0',
+            version: '0.3.2',
             status: 'online',
             documentation: '/documentation',
             health: '/api/v1/health'
@@ -93,9 +103,9 @@ if (process.env.NODE_ENV !== 'test') {
                     process.exit(1);
                 }
                 // eslint-disable-next-line no-console
-                console.log(`🚀 ZManage-APIs running at ${address}`);
+                console.log(`[Server] ZManage-APIs running at ${address}`);
                 // eslint-disable-next-line no-console
-                console.log(`📖 Documentation available at ${address}/documentation`);
+                console.log(`[Documentation] Available at ${address}/documentation`);
             });
         })
         .catch((err) => {

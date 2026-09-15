@@ -1,5 +1,20 @@
 # ZManage-APIs Changelog
 
+## [0.3.2] - 2026-09-15
+### Rate Limiting Integration, Rule 8.4 Iconography Compliance & Version Alignment
+- **Rate Limiting Security Plugin (`app.ts`, `auth.ts`)**:
+  - Registered `@fastify/rate-limit` with global IP limits (120 req/min) and sanitization of error responses to prevent system leakage.
+  - Implemented strict route-level rate limiting on `/api/v1/auth/login` (10 req/min) against brute-force attacks.
+- **Rule 8.4 Iconography & Emoji Sanitization (`aiController.ts`, `app.ts`)**:
+  - Sanitized all heuristic fallback strings in `aiController.ts`, replacing emojis (`📄`, `📅`, `👥`, `💰`, `📦`, `👋`) with structured Markdown headers.
+  - Standardized console startup logs in `app.ts` to use clean text tags `[Server]` and `[Documentation]`.
+- **Elimination of Hardcoded Fallback IDs (`auth.ts`, `aiController.ts`)**:
+  - Removed hardcoded fallback UUID from auth token return in `auth.ts`.
+  - Removed hardcoded client ID from booking filters in `aiController.ts` to ensure strict tenant data isolation.
+- **Version Harmonization & Auth Prefix (`package.json`, `swagger.ts`, `app.ts`, `auth.ts`)**:
+  - Synchronized package version to `0.3.2` across `package.json`, root route, and OpenAPI documentation (`swagger.ts`).
+  - Standardized fallback token generation prefix to `zm_auth_${userId}`.
+
 ## [0.3.1] - 2026-09-13
 ### Zorvik AI Multimodal PDF Analysis & Payload Hardening
 - **Multimodal Document & PDF Inspection (`aiController.ts`)**:
