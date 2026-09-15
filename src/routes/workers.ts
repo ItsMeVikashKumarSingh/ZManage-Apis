@@ -6,13 +6,15 @@ import {
     checkWorkerAvailability,
     getImportCandidates,
     batchImportWorkers,
-    deleteWorker
+    deleteWorker,
+    updateWorkerPermissions
 } from '../controllers/workersController';
 
 export default async function workerRoutes(app: FastifyInstance) {
     app.get('/', listWorkers);
     app.post('/', createWorker);
     app.patch('/:id', updateWorker);
+    app.patch('/:id/permissions', updateWorkerPermissions);
     app.delete('/:id', deleteWorker);
     app.post('/check-availability', checkWorkerAvailability);
 

@@ -125,6 +125,34 @@ export default async function authRoutes(app: FastifyInstance) {
             projectId = clientProjects[0].id;
         }
 
+        const ALL_TABS = [
+            'ai', 'analytics', 'bookings', 'schedule',
+            'inventory', 'kits', 'consumables', 'vaults',
+            'crew', 'payouts', 'logs'
+        ];
+
+        let userRoleTier = 'admin';
+        let userAllowedTabs = ALL_TABS;
+
+        // If user is a registered team member/worker, fetch their assigned role_tier and allowed_tabs
+        if (projectId || clientId) {
+            const { data: worker } = await supabase
+                .schema('zmanage')
+                .from('workers')
+                .select('role_tier, allowed_tabs')
+                .or(`user_id.eq.${userId},email.ilike.${lowerEmail}`)
+                .eq('deleted_flag', false)
+                .limit(1)
+                .maybeSingle();
+
+            if (worker) {
+                userRoleTier = worker.role_tier || 'crew';
+                userAllowedTabs = Array.isArray(worker.allowed_tabs) && worker.allowed_tabs.length > 0
+                    ? worker.allowed_tabs
+                    : (userRoleTier === 'admin' ? ALL_TABS : ['schedule', 'ai']);
+            }
+        }
+
         // If client/project exists, return enriched session
         return reply.send({
             success: true,
@@ -133,10 +161,14 @@ export default async function authRoutes(app: FastifyInstance) {
             clientName,
             rmsEnabled: clientProjects.length > 0,
             projects: clientProjects,
+            roleTier: userRoleTier,
+            allowedTabs: userAllowedTabs,
             user: {
                 id: userId,
                 email: lowerEmail,
-                name: clientName
+                name: clientName,
+                roleTier: userRoleTier,
+                allowedTabs: userAllowedTabs
             }
         });
     });
@@ -276,12 +308,42 @@ export default async function authRoutes(app: FastifyInstance) {
                 isPrimary: Boolean(p.tcp_is_primary)
             }));
 
+        const ALL_TABS = [
+            'ai', 'analytics', 'bookings', 'schedule',
+            'inventory', 'kits', 'consumables', 'vaults',
+            'crew', 'payouts', 'logs'
+        ];
+
+        let userRoleTier = 'admin';
+        let userAllowedTabs = ALL_TABS;
+
+        const authUserId = request.tenantContext?.userId;
+        if (authUserId) {
+            const { data: worker } = await supabase
+                .schema('zmanage')
+                .from('workers')
+                .select('role_tier, allowed_tabs')
+                .eq('user_id', authUserId)
+                .eq('project_id', project.tcp_id)
+                .eq('deleted_flag', false)
+                .maybeSingle();
+
+            if (worker) {
+                userRoleTier = worker.role_tier || 'crew';
+                userAllowedTabs = Array.isArray(worker.allowed_tabs) && worker.allowed_tabs.length > 0
+                    ? worker.allowed_tabs
+                    : (userRoleTier === 'admin' ? ALL_TABS : ['schedule', 'ai']);
+            }
+        }
+
         return reply.send({
             success: true,
             hasAccess: isRmsEnabled,
             rmsEnabled: isRmsEnabled,
             projectId: project.tcp_id,
             projectName: project.tcp_name,
+            roleTier: userRoleTier,
+            allowedTabs: userAllowedTabs,
             availableProjects
         });
     });

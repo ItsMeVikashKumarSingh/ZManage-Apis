@@ -68,7 +68,7 @@ export async function buildApp() {
     app.get('/', async () => {
         return {
             service: 'Zorvik ZManage-APIs',
-            version: '0.3.2',
+            version: '0.4.0',
             status: 'online',
             documentation: '/documentation',
             health: '/api/v1/health'

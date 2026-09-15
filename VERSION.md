@@ -1,5 +1,18 @@
 # ZManage-APIs Changelog
 
+## [0.4.0] - 2026-09-15
+### Team Role-Based Access Control (RBAC) & Tab Permissions
+- **Granular Tab Permissions API (`workersController.ts`, `routes/workers.ts`)**:
+  - Implemented `PATCH /api/v1/workers/:id/permissions` endpoint with array sanitization and validation.
+  - Added support for `role_tier` and `allowed_tabs` on `createWorker` and `updateWorker`.
+  - Mandatory audit logging (`WORKER_PERMISSIONS_UPDATED`) tracking admin ID, target worker, new role tier, and allowed tabs array.
+- **Session RBAC Enrichment (`routes/auth.ts`)**:
+  - Enriched `/api/v1/auth/login` and `/api/v1/auth/verify-access` to cross-reference `zmanage.workers` by `user_id` or `email`.
+  - Automatically returns `roleTier` and `allowedTabs` to drive dynamic client-side tab visibility and permission enforcement.
+  - Studio project owners automatically granted `roleTier: 'admin'` with full 11-tab access.
+- **Version Harmonization**:
+  - Incremented version to `0.4.0` across `package.json`, OpenAPI documentation, and `/` root route.
+
 ## [0.3.2] - 2026-09-15
 ### Rate Limiting Integration, Rule 8.4 Iconography Compliance & Version Alignment
 - **Rate Limiting Security Plugin (`app.ts`, `auth.ts`)**:

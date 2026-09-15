@@ -41,6 +41,8 @@ export interface Worker {
         ifsc?: string;
     };
     status: 'active' | 'on_leave' | 'inactive';
+    role_tier?: 'admin' | 'manager' | 'logistics' | 'finance' | 'crew' | 'custom' | string;
+    allowed_tabs?: string[];
     is_active: boolean;
     deleted_flag: boolean;
     created_at: string;

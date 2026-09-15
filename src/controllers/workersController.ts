@@ -28,6 +28,18 @@ export async function createWorker(request: FastifyRequest, reply: FastifyReply)
     const { clientId, projectId } = request.tenantContext!;
     const body = request.body as any;
 
+    const ALL_TABS = [
+        'ai', 'analytics', 'bookings', 'schedule',
+        'inventory', 'kits', 'consumables', 'vaults',
+        'crew', 'payouts', 'logs'
+    ];
+    const DEFAULT_CREW_TABS = ['schedule', 'ai'];
+
+    const roleTier = body.role_tier || (body.primary_role?.toLowerCase().includes('manager') ? 'admin' : 'crew');
+    const allowedTabs = Array.isArray(body.allowed_tabs) && body.allowed_tabs.length > 0
+        ? body.allowed_tabs
+        : (roleTier === 'admin' ? ALL_TABS : DEFAULT_CREW_TABS);
+
     const { data, error } = await supabase
         .schema('zmanage')
         .from('workers')
@@ -46,6 +58,8 @@ export async function createWorker(request: FastifyRequest, reply: FastifyReply)
             overtime_hourly_rate: body.overtime_hourly_rate || 0,
             currency: body.currency || 'INR',
             payment_details: body.payment_details || {},
+            role_tier: roleTier,
+            allowed_tabs: allowedTabs,
             status: body.status || 'active'
         })
         .select()
@@ -267,4 +281,56 @@ export async function deleteWorker(request: FastifyRequest, reply: FastifyReply)
     });
 
     return reply.send({ success: true, message: 'Worker deleted successfully', worker: data });
+}
+
+export async function updateWorkerPermissions(request: FastifyRequest, reply: FastifyReply) {
+    const { projectId } = request.tenantContext!;
+    const { id } = request.params as { id: string };
+    const { role_tier, allowed_tabs } = request.body as { role_tier?: string; allowed_tabs?: string[] };
+
+    if (!Array.isArray(allowed_tabs) || allowed_tabs.length === 0) {
+        return reply.code(400).send({ error: 'allowed_tabs must be a non-empty array of tab identifiers' });
+    }
+
+    const validTabs = [
+        'ai', 'analytics', 'bookings', 'schedule',
+        'inventory', 'kits', 'consumables', 'vaults',
+        'crew', 'payouts', 'logs'
+    ];
+
+    const sanitizedTabs = Array.from(new Set(allowed_tabs.filter(t => validTabs.includes(t))));
+    if (sanitizedTabs.length === 0) {
+        return reply.code(400).send({ error: 'No valid tabs specified in allowed_tabs' });
+    }
+
+    const tier = role_tier || 'custom';
+
+    const { data, error } = await supabase
+        .schema('zmanage')
+        .from('workers')
+        .update({
+            role_tier: tier,
+            allowed_tabs: sanitizedTabs,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('project_id', projectId)
+        .select()
+        .single();
+
+    if (error) return reply.code(400).send({ error: error.message });
+
+    logAuditEvent(request, 'WORKER_PERMISSIONS_UPDATED', 'WORKER', {
+        worker_id: id,
+        name: data.name,
+        role_tier: tier,
+        allowed_tabs: sanitizedTabs,
+        tab_count: sanitizedTabs.length
+    });
+
+    return reply.send({
+        success: true,
+        message: `Updated permissions for ${data.name}`,
+        worker: data
+    });
 }
