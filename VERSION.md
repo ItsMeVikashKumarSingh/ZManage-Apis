@@ -1,5 +1,11 @@
 # ZManage-APIs Changelog
 
+## [0.4.1] - 2026-09-19
+### Password Recovery Endpoint Fallback
+- **Forgot Password Endpoint (`routes/auth.ts`)**:
+  - Implemented `POST /api/v1/auth/forgot-password` with rate limiting (5 req/min).
+  - Triggers Supabase password reset email as secondary fallback service for ZManage Web.
+
 ## [0.4.0] - 2026-09-15
 ### Team Role-Based Access Control (RBAC) & Tab Permissions
 - **Granular Tab Permissions API (`workersController.ts`, `routes/workers.ts`)**:

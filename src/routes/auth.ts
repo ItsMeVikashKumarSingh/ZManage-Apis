@@ -347,4 +347,41 @@ export default async function authRoutes(app: FastifyInstance) {
             availableProjects
         });
     });
+
+    /**
+     * @route POST /api/v1/auth/forgot-password
+     * @desc Trigger password recovery email
+     */
+    app.post(
+        '/forgot-password',
+        {
+            config: {
+                rateLimit: {
+                    max: 5,
+                    timeWindow: '1 minute'
+                }
+            }
+        },
+        async (request: FastifyRequest, reply: FastifyReply) => {
+            const { email, redirectTo } = (request.body || {}) as { email?: string; redirectTo?: string };
+
+            if (!email) {
+                return reply.code(400).send({ error: 'Email address is required' });
+            }
+
+            const cleanEmail = email.toLowerCase().trim();
+            const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+                redirectTo: redirectTo || 'https://zmanage.zorviktech.com/reset-password'
+            });
+
+            if (error) {
+                return reply.code(400).send({ error: error.message || 'Failed to send recovery email' });
+            }
+
+            return reply.send({
+                success: true,
+                message: 'Password reset instructions have been sent to your email.'
+            });
+        }
+    );
 }
