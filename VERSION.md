@@ -1,5 +1,14 @@
 # ZManage-APIs Changelog
 
+## [0.4.2] - 2026-09-26
+### Vercel Serverless Function & Deployment Integration
+- **Serverless Handler (`api/index.ts`)**:
+  - Added Vercel serverless request handler exporting default async handler with cached Fastify instance to eliminate cold-start re-registration.
+- **Vercel Configuration (`vercel.json`)**:
+  - Configured `@vercel/node` builder and wildcard routing to `/api/index.ts`.
+- **Server Bootstrap Guard (`src/app.ts`)**:
+  - Guarded `app.listen()` to execute only when `!process.env.VERCEL`, preventing port-binding crashes in serverless lambda environments.
+
 ## [0.4.1] - 2026-09-19
 ### Password Recovery Endpoint Fallback
 - **Forgot Password Endpoint (`routes/auth.ts`)**:

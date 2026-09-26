@@ -93,7 +93,7 @@ export async function buildApp() {
 }
 
 // Start Server if directly invoked
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
     buildApp()
         .then((app) => {
             app.listen({ port: env.PORT, host: '0.0.0.0' }, (err, address) => {
