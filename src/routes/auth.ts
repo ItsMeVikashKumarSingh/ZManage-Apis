@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { supabase } from '../config/supabase';
+import { supabase, createAdminClient, createAuthClient } from '../config/supabase';
 
 export default async function authRoutes(app: FastifyInstance) {
     /**
@@ -25,8 +25,10 @@ export default async function authRoutes(app: FastifyInstance) {
 
         const lowerEmail = email.toLowerCase().trim();
 
-        // 1. Authenticate with Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        // 1. Authenticate with Supabase Auth — use isolated anon client to prevent
+        //    signInWithPassword from mutating the service-role singleton's in-memory session.
+        const authClient = createAuthClient();
+        const { data: authData, error: authError } = await authClient.auth.signInWithPassword({
             email: lowerEmail,
             password: password
         });
@@ -37,14 +39,16 @@ export default async function authRoutes(app: FastifyInstance) {
 
         const userId = authData.user.id;
 
-        // 2. Resolve Client and Project from management schema
-        // Look up either in tbl_clients (owner) or tbl_client_projects
+        // 2. Resolve Client and Project — use a fresh admin client to ensure service_role
+        //    authorization is intact (not contaminated by the auth mutation above).
+        const adminClient = createAdminClient();
+
         let clientId: string | null = null;
         let projectId: string | null = null;
         let clientName: string = 'Client Studio';
 
         // Check if user is direct client owner
-        const { data: client } = await supabase
+        const { data: client } = await adminClient
             .schema('management')
             .from('tbl_clients')
             .select('tc_id, tc_client_name')
@@ -57,7 +61,7 @@ export default async function authRoutes(app: FastifyInstance) {
             clientName = client.tc_client_name || 'Client Studio';
 
             // Find primary project
-            const { data: project } = await supabase
+            const { data: project } = await adminClient
                 .schema('management')
                 .from('tbl_client_projects')
                 .select('tcp_id')
@@ -72,7 +76,7 @@ export default async function authRoutes(app: FastifyInstance) {
             }
         } else {
             // Fallback: Check studio.tbl_profiles
-            const { data: profile } = await supabase
+            const { data: profile } = await adminClient
                 .schema('studio')
                 .from('tbl_profiles')
                 .select('id, client_id, full_name, role')
@@ -84,7 +88,7 @@ export default async function authRoutes(app: FastifyInstance) {
                 clientId = profile.client_id;
                 clientName = profile.full_name || 'Studio Staff';
 
-                const { data: project } = await supabase
+                const { data: project } = await adminClient
                     .schema('management')
                     .from('tbl_client_projects')
                     .select('tcp_id')
@@ -102,7 +106,7 @@ export default async function authRoutes(app: FastifyInstance) {
         // Fetch all RMS-enabled or active projects for this client
         let clientProjects: Array<{ id: string; name: string; category?: string; websiteType?: string }> = [];
         if (clientId) {
-            const { data: projs } = await supabase
+            const { data: projs } = await adminClient
                 .schema('management')
                 .from('tbl_client_projects')
                 .select('tcp_id, tcp_name, tcp_project_category, tcp_website_type, tcp_rms_enabled')
@@ -136,7 +140,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
         // If user is a registered team member/worker, fetch their assigned role_tier and allowed_tabs
         if (projectId || clientId) {
-            const { data: worker } = await supabase
+            const { data: worker } = await adminClient
                 .schema('zmanage')
                 .from('workers')
                 .select('role_tier, allowed_tabs')
@@ -183,17 +187,18 @@ export default async function authRoutes(app: FastifyInstance) {
         const query = request.query as { tenantId?: string; projectId?: string };
         const fallbackId = tenantIdHeader || query.projectId || query.tenantId;
 
+        const adminClient = createAdminClient();
         let clientId: string | null = null;
 
         if (authHeader && authHeader.startsWith('Bearer ')) {
             const token = authHeader.replace('Bearer ', '').trim();
-            const { data: userData } = await supabase.auth.getUser(token);
+            const { data: userData } = await adminClient.auth.getUser(token);
 
             if (userData?.user) {
                 const email = (userData.user.email || '').toLowerCase().trim();
                 const userId = userData.user.id;
 
-                const { data: client } = await supabase
+                const { data: client } = await adminClient
                     .schema('management')
                     .from('tbl_clients')
                     .select('tc_id, tc_client_name')
@@ -209,7 +214,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
         // If not found via Bearer token, fallback to tenantId / projectId
         if (!clientId && fallbackId) {
-            const { data: proj } = await supabase
+            const { data: proj } = await adminClient
                 .schema('management')
                 .from('tbl_client_projects')
                 .select('tcp_client_id')
@@ -227,7 +232,7 @@ export default async function authRoutes(app: FastifyInstance) {
             return reply.send({ success: true, count: 0, projects: [] });
         }
 
-        const { data: projs, error: projErr } = await supabase
+        const { data: projs, error: projErr } = await adminClient
             .schema('management')
             .from('tbl_client_projects')
             .select('tcp_id, tcp_name, tcp_project_category, tcp_website_type, tcp_rms_enabled, tcp_is_primary')
@@ -257,7 +262,32 @@ export default async function authRoutes(app: FastifyInstance) {
     app.get('/verify-access', async (request: FastifyRequest, reply: FastifyReply) => {
         const query = request.query as { projectId?: string; tenantId?: string };
         const tenantIdHeader = request.headers['x-tenant-id'] as string;
-        const targetId = query.projectId || query.tenantId || tenantIdHeader;
+        let targetId = query.projectId || query.tenantId || tenantIdHeader;
+
+        const adminClient = createAdminClient();
+
+        if (!targetId) {
+            // Attempt to resolve targetId from Bearer token
+            const authHeader = request.headers['authorization'];
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.replace('Bearer ', '').trim();
+                const { data: userData } = await adminClient.auth.getUser(token);
+                if (userData?.user) {
+                    const email = (userData.user.email || '').toLowerCase().trim();
+                    const userId = userData.user.id;
+                    const { data: client } = await adminClient
+                        .schema('management')
+                        .from('tbl_clients')
+                        .select('tc_id')
+                        .or(`tc_auth_user_id.eq.${userId},tc_contact_email.ilike.${email}`)
+                        .eq('tc_deleted_flag', false)
+                        .maybeSingle();
+                    if (client?.tc_id) {
+                        targetId = client.tc_id;
+                    }
+                }
+            }
+        }
 
         if (!targetId) {
             return reply.code(400).send({
@@ -268,7 +298,7 @@ export default async function authRoutes(app: FastifyInstance) {
             });
         }
 
-        const { data: project, error } = await supabase
+        const { data: project, error } = await adminClient
             .schema('management')
             .from('tbl_client_projects')
             .select('tcp_id, tcp_client_id, tcp_name, tcp_rms_enabled, tcp_is_active, tcp_deleted_flag')
@@ -290,7 +320,7 @@ export default async function authRoutes(app: FastifyInstance) {
         const isRmsEnabled = project.tcp_rms_enabled !== false;
 
         // Also fetch all available RMS projects for this client so client can switch if needed
-        const { data: projs } = await supabase
+        const { data: projs } = await adminClient
             .schema('management')
             .from('tbl_client_projects')
             .select('tcp_id, tcp_name, tcp_project_category, tcp_website_type, tcp_rms_enabled, tcp_is_primary')
@@ -319,7 +349,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
         const authUserId = request.tenantContext?.userId;
         if (authUserId) {
-            const { data: worker } = await supabase
+            const { data: worker } = await adminClient
                 .schema('zmanage')
                 .from('workers')
                 .select('role_tier, allowed_tabs')

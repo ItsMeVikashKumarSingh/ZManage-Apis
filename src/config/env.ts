@@ -30,6 +30,7 @@ const envSchema = z.object({
             return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
         }),
     SUPABASE_SERVICE_ROLE_KEY: z.string().default(process.env.NODE_ENV === 'test' ? 'mock_service_key' : ''),
+    SUPABASE_ANON_KEY: z.string().default(process.env.NODE_ENV === 'test' ? 'mock_anon_key' : ''),
 
     // Zorvik AI Microservice
     ZORVIK_AI_URL: z

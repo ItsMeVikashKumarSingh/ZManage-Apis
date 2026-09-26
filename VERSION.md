@@ -1,5 +1,13 @@
 # ZManage-APIs Changelog
 
+## [0.4.3] - 2026-09-26
+### Fix: Supabase Singleton Mutation in Auth Login (RMS False Positive)
+- **Root cause**: `supabase.auth.signInWithPassword()` mutated the singleton service-role client's in-memory session, switching subsequent DB queries to the user JWT with no RLS context — causing `management.tbl_clients` to return null.
+- **Fix (`src/config/supabase.ts`)**: Added `createAdminClient()` (service-role) and `createAuthClient()` (anon key) factory functions — each creates an isolated `createClient()` instance per invocation.
+- **Fix (`src/routes/auth.ts`)**: Login route now uses `createAuthClient()` for `signInWithPassword` and `createAdminClient()` for all subsequent DB queries — prevents mutation bleed.
+- **Fix (`src/config/env.ts`)**: Added `SUPABASE_ANON_KEY` to env schema for `createAuthClient()`.
+- **Result**: Login response now correctly returns `rmsEnabled: true` and non-empty `projects[]` when DB has `tcp_rms_enabled: true`.
+
 ## [0.4.2] - 2026-09-26
 ### Vercel Serverless Function & Deployment Integration
 - **Serverless Handler (`api/index.ts`)**:
