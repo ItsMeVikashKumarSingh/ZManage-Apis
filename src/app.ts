@@ -55,6 +55,17 @@ export async function buildApp() {
         ]
     });
 
+    // Ensure all responses (including errors and serverless handlers) guarantee Access-Control headers
+    app.addHook('onSend', async (request, reply) => {
+        const origin = request.headers.origin;
+        if (origin) {
+            reply.header('access-control-allow-origin', origin);
+            reply.header('access-control-allow-credentials', 'true');
+        } else {
+            reply.header('access-control-allow-origin', '*');
+        }
+    });
+
     // Swagger Documentation
     await app.register(swagger, swaggerOptions);
     await app.register(swaggerUi, swaggerUiOptions);

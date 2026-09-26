@@ -8,5 +8,11 @@ export default async (req: any, res: any) => {
         app = await buildApp();
         await app.ready();
     }
-    app.server.emit('request', req, res);
+
+    await new Promise<void>((resolve) => {
+        res.on('finish', resolve);
+        res.on('close', resolve);
+        res.on('error', resolve);
+        app!.server.emit('request', req, res);
+    });
 };

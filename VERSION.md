@@ -1,5 +1,10 @@
 # ZManage-APIs Changelog
 
+## [0.4.5] - 2026-09-26
+### Fix: Vercel Serverless Handler Lifecycle & Guaranteed CORS Headers
+- **Serverless Handler Lifecycle (`api/index.ts`)**: Awaited the Fastify response completion (`res.on('finish')` / `res.on('close')`) inside the serverless handler before returning. Previously, the handler completed synchronously while DB queries were still in flight, causing Vercel to terminate the connection prematurely (leading to 0-byte responses and browser "no status arrived" network dropouts).
+- **Guaranteed CORS Headers (`src/app.ts`)**: Added an `onSend` hook that unconditionally sets `access-control-allow-origin` (reflecting the incoming request origin) and `access-control-allow-credentials: true` across all responses (including errors).
+
 ## [0.4.4] - 2026-09-26
 ### Fix: Supabase Anon Key Serverless Fallback
 - **Fix (`src/config/env.ts` & `src/config/supabase.ts`)**: Added fallback to known anon key and service role key if `SUPABASE_ANON_KEY` is not explicitly set in Vercel environment variables, preventing `supabaseKey is required.` 500 crashes during serverless invocation.
