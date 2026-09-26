@@ -8,6 +8,8 @@
   - Configured `@vercel/node` builder and wildcard routing to `/api/index.ts`.
 - **Server Bootstrap Guard (`src/app.ts`)**:
   - Guarded `app.listen()` to execute only when `!process.env.VERCEL`, preventing port-binding crashes in serverless lambda environments.
+- **Environment Schema Robustness (`src/config/env.ts`)**:
+  - Added URL normalization transforms on `APP_URL`, `SUPABASE_URL`, and `ZORVIK_AI_URL` to prevent lambda crashes if hostnames are provided without protocol prefixes in Vercel settings.
 
 ## [0.4.1] - 2026-09-19
 ### Password Recovery Endpoint Fallback
