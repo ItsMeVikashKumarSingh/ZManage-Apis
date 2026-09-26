@@ -30,7 +30,12 @@ const envSchema = z.object({
             return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
         }),
     SUPABASE_SERVICE_ROLE_KEY: z.string().default(process.env.NODE_ENV === 'test' ? 'mock_service_key' : ''),
-    SUPABASE_ANON_KEY: z.string().default(process.env.NODE_ENV === 'test' ? 'mock_anon_key' : ''),
+    SUPABASE_ANON_KEY: z
+        .string()
+        .default(
+            process.env.SUPABASE_ANON_KEY ||
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViZHFwY2Fua2R4am9hc3Zrc2J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTI4NjEsImV4cCI6MjA5ODQ4ODg2MX0.lzaVafgLaIqedAy2mnYf792E_VRQ3vNH5T1stYskcOw'
+        ),
 
     // Zorvik AI Microservice
     ZORVIK_AI_URL: z

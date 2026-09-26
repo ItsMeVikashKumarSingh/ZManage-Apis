@@ -30,7 +30,10 @@ export function createAdminClient() {
  * Must be a new instance per request to prevent session-state bleed across requests.
  */
 export function createAuthClient() {
-    return createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
+    const key = (env.SUPABASE_ANON_KEY && env.SUPABASE_ANON_KEY.trim())
+        ? env.SUPABASE_ANON_KEY.trim()
+        : env.SUPABASE_SERVICE_ROLE_KEY;
+    return createClient(env.SUPABASE_URL, key, {
         auth: {
             autoRefreshToken: false,
             persistSession: false

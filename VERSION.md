@@ -1,5 +1,9 @@
 # ZManage-APIs Changelog
 
+## [0.4.4] - 2026-09-26
+### Fix: Supabase Anon Key Serverless Fallback
+- **Fix (`src/config/env.ts` & `src/config/supabase.ts`)**: Added fallback to known anon key and service role key if `SUPABASE_ANON_KEY` is not explicitly set in Vercel environment variables, preventing `supabaseKey is required.` 500 crashes during serverless invocation.
+
 ## [0.4.3] - 2026-09-26
 ### Fix: Supabase Singleton Mutation in Auth Login (RMS False Positive)
 - **Root cause**: `supabase.auth.signInWithPassword()` mutated the singleton service-role client's in-memory session, switching subsequent DB queries to the user JWT with no RLS context — causing `management.tbl_clients` to return null.
