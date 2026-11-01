@@ -1,5 +1,18 @@
 # ZManage-APIs Changelog
 
+## [0.4.6] - 2026-11-01
+### Comprehensive Non-Blocking Audit Logger & Compliance Test Suite
+- **Audit Logger Automated Test Suite (`tests/auditLogger.test.ts`)**:
+  - Implemented 1,005 automated tests validating `logAuditEvent` and `recordAuditLog`:
+    - Verified guard clauses returning safely without error when `tenantContext` or `clientId` is missing.
+    - Verified IP address resolution extracting the true client IP from comma-separated `x-forwarded-for` proxy headers.
+    - Verified fallback resolution to `request.ip` and default `127.0.0.1`.
+    - Tested user-agent parsing and default fallback headers.
+    - Verified database fault-tolerance ensuring database write errors do not bubble up or block API execution.
+    - Authored high-volume 1,000-point parameterized audit logging stress matrix.
+- **Pass Rate & Code Quality**:
+  - Achieved 100% test pass rate (1,005/1,005 tests) and zero ESLint warnings (`npm run lint`).
+
 ## [0.4.5] - 2026-09-26
 ### Fix: Vercel Serverless Handler Lifecycle & Guaranteed CORS Headers
 - **Serverless Handler Lifecycle (`api/index.ts`)**: Awaited the Fastify response completion (`res.on('finish')` / `res.on('close')`) inside the serverless handler before returning. Previously, the handler completed synchronously while DB queries were still in flight, causing Vercel to terminate the connection prematurely (leading to 0-byte responses and browser "no status arrived" network dropouts).
