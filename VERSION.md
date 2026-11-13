@@ -1,5 +1,16 @@
 # ZManage-APIs Changelog
 
+## [0.4.7] - 2026-11-13
+### Security Hardening: BOLA / Tenant Context Hijacking & CORS Override Remediation
+- **BOLA Remediation in Client Auth Middleware (`src/middleware/clientAuth.ts`)**:
+  - Remediated Broken Object Level Authorization (BOLA / IDOR) vulnerability where arbitrary `X-Tenant-ID` headers allowed cross-tenant context hijacking.
+  - Added strict ownership verification confirming the authenticated `userId` owns or belongs to the client in `management.tbl_clients` before granting project access.
+- **CORS Override Removal (`src/app.ts`)**:
+  - Removed the unsafe `onSend` Fastify hook that blindly reflected any incoming `Origin` with `access-control-allow-credentials: true`.
+  - Configured `@fastify/cors` with verified platform, local development, and tenant domain validation.
+- **Automated Regression Test Suite (`tests/tenantIsolation.test.ts`)**:
+  - Implemented 9 automated tests verifying BOLA/IDOR prevention, cross-tenant header rejection (HTTP 403), valid tenant project access, superadmin elevation, and API key scopes (`sk_live` / `pk_live`). Total suite: 1,014 passing tests.
+
 ## [0.4.6] - 2026-11-01
 ### Comprehensive Non-Blocking Audit Logger & Compliance Test Suite
 - **Audit Logger Automated Test Suite (`tests/auditLogger.test.ts`)**:

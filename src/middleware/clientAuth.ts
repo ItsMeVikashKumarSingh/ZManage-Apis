@@ -69,7 +69,33 @@ export async function clientAuthMiddleware(request: FastifyRequest, reply: Fasti
                 let targetClientId: string | null = null;
                 let targetProjectId: string | null = null;
 
-                // Priority: if X-Tenant-ID header was supplied, verify the user has access to it
+                // First resolve caller's verified client profile
+                const { data: client } = await supabase
+                    .schema('management')
+                    .from('tbl_clients')
+                    .select('tc_id, tc_status_flag, tc_deleted_flag')
+                    .or(`tc_auth_user_id.eq.${userId},tc_contact_email.ilike.${userEmail}`)
+                    .eq('tc_deleted_flag', false)
+                    .maybeSingle();
+
+                // Check if user is a global system admin
+                let isGlobalAdmin = false;
+                if (!client) {
+                    const { data: adminUser } = await supabase
+                        .schema('management')
+                        .from('tbl_users')
+                        .select('tu_id, tu_role')
+                        .eq('tu_auth_user_id', userId)
+                        .in('tu_role', ['admin', 'super_admin'])
+                        .eq('tu_deleted_flag', false)
+                        .maybeSingle();
+
+                    if (adminUser) {
+                        isGlobalAdmin = true;
+                    }
+                }
+
+                // If X-Tenant-ID header was supplied, verify caller has explicit permission to target it
                 if (tenantIdHeader) {
                     const { data: targetProject } = await supabase
                         .schema('management')
@@ -87,38 +113,38 @@ export async function clientAuthMiddleware(request: FastifyRequest, reply: Fasti
                                 message: 'Resource Management System is not enabled for this project.'
                             });
                         }
+
+                        // Strict BOLA check: Ensure user either owns this client or is a global admin
+                        const isOwner = client && client.tc_status_flag !== false && client.tc_id === targetProject.tcp_client_id;
+                        if (!isOwner && !isGlobalAdmin) {
+                            return reply.code(403).send({
+                                error: 'FORBIDDEN',
+                                message: 'Access denied. You do not have permissions for this tenant project.'
+                            });
+                        }
+
                         targetClientId = targetProject.tcp_client_id;
                         targetProjectId = targetProject.tcp_id;
                     }
                 }
 
-                // If not resolved from header, resolve from client profile
-                if (!targetProjectId) {
-                    const { data: client } = await supabase
+                // If not resolved from header, resolve from client's primary project
+                if (!targetProjectId && client && client.tc_status_flag !== false) {
+                    targetClientId = client.tc_id;
+
+                    const { data: proj } = await supabase
                         .schema('management')
-                        .from('tbl_clients')
-                        .select('tc_id, tc_status_flag, tc_deleted_flag')
-                        .or(`tc_auth_user_id.eq.${userId},tc_contact_email.ilike.${userEmail}`)
-                        .eq('tc_deleted_flag', false)
+                        .from('tbl_client_projects')
+                        .select('tcp_id, tcp_rms_enabled')
+                        .eq('tcp_client_id', targetClientId)
+                        .eq('tcp_deleted_flag', false)
+                        .filter('tcp_rms_enabled', 'neq', false)
+                        .order('tcp_is_primary', { ascending: false })
+                        .limit(1)
                         .maybeSingle();
 
-                    if (client && client.tc_status_flag !== false) {
-                        targetClientId = client.tc_id;
-
-                        const { data: proj } = await supabase
-                            .schema('management')
-                            .from('tbl_client_projects')
-                            .select('tcp_id, tcp_rms_enabled')
-                            .eq('tcp_client_id', targetClientId)
-                            .eq('tcp_deleted_flag', false)
-                            .filter('tcp_rms_enabled', 'neq', false)
-                            .order('tcp_is_primary', { ascending: false })
-                            .limit(1)
-                            .maybeSingle();
-
-                        if (proj) {
-                            targetProjectId = proj.tcp_id;
-                        }
+                    if (proj) {
+                        targetProjectId = proj.tcp_id;
                     }
                 }
 

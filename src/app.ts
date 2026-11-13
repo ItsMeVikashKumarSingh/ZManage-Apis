@@ -41,7 +41,27 @@ export async function buildApp() {
         })
     });
     await app.register(cors, {
-        origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN.split(','),
+        origin: (origin, cb) => {
+            if (!origin) return cb(null, true);
+            const cleanOrigin = origin.toLowerCase();
+            const isLocal = cleanOrigin.includes('localhost') || cleanOrigin.includes('127.0.0.1');
+            const isPlatform = cleanOrigin.endsWith('.zorviktech.com') || cleanOrigin === 'https://zorviktech.com';
+            const isPreview = cleanOrigin.endsWith('.vercel.app') || cleanOrigin.endsWith('.pages.dev');
+
+            if (isLocal || isPlatform || isPreview) {
+                return cb(null, true);
+            }
+
+            if (env.CORS_ORIGIN && env.CORS_ORIGIN !== '*') {
+                const allowed = env.CORS_ORIGIN.split(',').map((o) => o.trim().toLowerCase());
+                if (allowed.includes(cleanOrigin)) {
+                    return cb(null, true);
+                }
+            }
+
+            // Tenant origins will be strictly validated in clientAuthMiddleware
+            cb(null, true);
+        },
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: [
@@ -53,17 +73,6 @@ export async function buildApp() {
             'x-publishable-key',
             'Accept'
         ]
-    });
-
-    // Ensure all responses (including errors and serverless handlers) guarantee Access-Control headers
-    app.addHook('onSend', async (request, reply) => {
-        const origin = request.headers.origin;
-        if (origin) {
-            reply.header('access-control-allow-origin', origin);
-            reply.header('access-control-allow-credentials', 'true');
-        } else {
-            reply.header('access-control-allow-origin', '*');
-        }
     });
 
     // Swagger Documentation
